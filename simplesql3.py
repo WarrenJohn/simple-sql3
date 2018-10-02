@@ -256,6 +256,9 @@ class simplesql3():
         return self
 
     def update(self, set_dict, where_dict):
+        """Takes 2 dictionaries, set_dict will take many arguments
+        but where_dict only accepts one key/value pair
+        """
         if len(where_dict) > 1:
             raise AttributeError("'where_dict' argument only receives one key/value pair. Chain with and_do/or_do methods for longer expressions")
         self._create_args([v for k, v in set_dict.items()])
@@ -324,10 +327,6 @@ if __name__ == '__main__':
     print(f"--\nupdate and_do:\n", f"{a.statement}")
     a.commit()
 
-    # How to do: "hi".and_do({"col1": "thing1", "col2": "thing2"}).select()
-    # or essentially:
-    # __str__.and_do({"col1": "thing1", "col2": "thing2"}).select()
-    # ?
     """
     https://mail.python.org/pipermail/python-dev/2003-October/038855.html
     I find the chaining form a threat to readability; it requires that the
