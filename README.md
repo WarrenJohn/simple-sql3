@@ -1,14 +1,14 @@
-#simplesql3
+# simplesql3
 This is a simple class I created to help me manage my sqlite3 databases in my projects. I've added some functionality to
 to allow basic SQL statement generation for updating, inserting, and selecting. You can chain statements together to allow
 somewhat complex statements.
 
-##To get started just:
+## To get started just:
 `from simplesql3 import simplesql3`
 or
 `from simplesql3 import simplesql3 as ss3`
 
-##Some basic tests are:
+## Some basic tests are:
 ```database_name, table_name, columns_dict
 a = simplesql3("testing", "testing", {"a": "INTEGER", "b": "TEXT", "c": "TEXT", "d": "TEXT"})  # Creating a DB
 b = simplesql3("testing", "testing2", {"e": "TEXT", "f": "TEXT", "g": "TEXT", "h": "TEXT"})  # Creating a new table
