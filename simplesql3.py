@@ -1,10 +1,4 @@
 import sqlite3
-# Concern: Are the standard dictionaries an issue? Should I switch to ordered dict?
-# How to automatically convert user input to ordered dict without losing order?
-# Context manager with __enter__ & __exit__ methods
-# https://stackoverflow.com/questions/1984325/explaining-pythons-enter-and-exit#1984346
-# https://github.com/mikelane/ShowerThoughtBot/blob/master/dbmanager.py
-# https://www.python.org/dev/peps/pep-0343/
 
 
 class dbMGMT():
