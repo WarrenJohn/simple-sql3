@@ -38,4 +38,4 @@ a.getlike("a, b", "c").between((2, 30), column="d")
 print(f"--\ngetlike between (and):\n", f"{a.statement}", a.select())
 ```
 
-For more tests, see the exampletest.py
+For more tests, see the test.py
