@@ -7,6 +7,25 @@ import sqlite3
 # https://www.python.org/dev/peps/pep-0343/
 
 
+class dbMGMT():
+    """
+    Adds simple context management to make resource management of the DB easier.
+    """
+
+    def __init__(self, db):
+        self.db = db
+        self.conn = None
+        self.c = None
+
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.db)
+        self.c = self.conn.cursor()
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.c.close()
+        self.conn.close()
+
+
 class simplesql3():
     """Table/db created upon init
 
@@ -33,7 +52,8 @@ class simplesql3():
         if not database_name and table_name:
             raise AttributeError("One/more missing: database_name, table_name")
 
-        columns_dict = dict()
+        if not columns_dict:
+            columns_dict = dict()
         self.database_name = database_name
         self.table_name = table_name
         self.override = override
@@ -295,6 +315,26 @@ class simplesql3():
         self.statement += "".join([f" WHERE {k} = ?" for k, v in where_dict.items()])
         print(self.statement)
         return self
+
+    def __str__(self):
+        return (f"""
+        current statement: {self.statement}
+        db name: {self.database_name}
+        table name: {self.table_name}
+        columns: {self.column_names}
+        columns types: {self.column_types}
+        args: {self.args}
+        """)
+
+    def __repr__(self):
+        return (f"""
+        current statement: {self.statement}
+        db name: {self.database_name}
+        table name: {self.table_name}
+        columns: {self.column_names}
+        columns types: {self.column_types}
+        args: {self.args}
+        """)
 
 
 """

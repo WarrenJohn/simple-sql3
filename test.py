@@ -5,6 +5,7 @@ from simplesql3 import simplesql3
 a = simplesql3("testing", "testing", {"a": "INTEGER", "b": "TEXT", "c": "TEXT", "d": "TEXT"})  # Creating a DB
 b = simplesql3("testing", "testing2", {"e": "TEXT", "f": "TEXT", "g": "TEXT", "h": "TEXT"})  # Creating a new table
 c = simplesql3("testing", "testing")  # Already existing DB
+print(a, b, c)
 # Uncomment this to populate DB for testing
 # for each in range(100):
 #     a.insert(1+each, 2+each, 3+each, 4+each)
