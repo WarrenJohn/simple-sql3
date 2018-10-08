@@ -1,17 +1,23 @@
 import sqlite3
+# Concern: Are the standard dictionaries an issue? Should I switch to ordered dict?
+# How to automatically convert user input to ordered dict without losing order?
+# Context manager with __enter__ & __exit__ methods
+# https://stackoverflow.com/questions/1984325/explaining-pythons-enter-and-exit#1984346
+# https://github.com/mikelane/ShowerThoughtBot/blob/master/dbmanager.py
+# https://www.python.org/dev/peps/pep-0343/
 
 
 class simplesql3():
     """Table/db created upon init
 
-    If working with an existing DB, leave the column_dict blank -
+    If working with an existing DB, leave the columns_dict blank -
     column names will be populated automatically.
 
     database_name: looks for suffix '.db' - will add
     '.db' if not found. This can be overridden with the
     override boolean argument
 
-    **column_dict takes the column name and the type:
+    **columns_dict takes the column name and the type:
     'col_name':'TEXT'
 
     Wildcard search: query = "%" + query + "%"
@@ -23,9 +29,11 @@ class simplesql3():
     TODO Add arg for returning in json
     """
 
-    def __init__(self, database_name, table_name, column_dict=dict(), override=False):
-        assert database_name and table_name is not None, "One/more missing: database_name, table_name"
+    def __init__(self, database_name, table_name, columns_dict=None, override=False):
+        if not database_name and table_name:
+            raise AttributeError("One/more missing: database_name, table_name")
 
+        columns_dict = dict()
         self.database_name = database_name
         self.table_name = table_name
         self.override = override
@@ -38,9 +46,9 @@ class simplesql3():
         else:
             self.database_name = database_name
 
-        self.column_dict = column_dict
+        self.columns_dict = columns_dict
 
-        if len(self.column_dict) is 0:
+        if len(self.columns_dict) == 0:
             # Gets the column names for working with an existing DB
             conn = sqlite3.connect(self.database_name)
             c = conn.cursor()
@@ -50,8 +58,8 @@ class simplesql3():
             c.close()
             conn.close()
         else:
-            self.column_names = list(self.column_dict.keys())
-            self.column_types = list(column_dict.values())
+            self.column_names = list(self.columns_dict.keys())
+            self.column_types = list(columns_dict.values())
 
         col_vals = "?," * len(str(self.column_names).split(","))
         self.col_vals = col_vals[:-1]
@@ -73,12 +81,12 @@ class simplesql3():
         return self
 
     def _check_operator(self, operator, type, arg=None):
-        if type in {"andis", "oris", "andlike", "orlike"} and isinstance(operator, dict):
+        if type in {"andis", "oris", "andlike", "orlike"} and isinstance(operator, list):
             operator_switch = {
-                "andis": [f" AND {k} = ?" for k, v in operator.items()],
-                "oris": [f" OR {k} = ?" for k, v in operator.items()],
-                "andlike": [f" AND {k} LIKE ?" for k, v in operator.items()],
-                "orlike": [f" OR {k} LIKE ?" for k, v in operator.items()]
+                "andis": [f" AND {k} = ?" for k, v in operator],
+                "oris": [f" OR {k} = ?" for k, v in operator],
+                "andlike": [f" AND {k} LIKE ?" for k, v in operator],
+                "orlike": [f" OR {k} LIKE ?" for k, v in operator]
             }
             operator = operator_switch[type]
 
@@ -88,11 +96,11 @@ class simplesql3():
                 return "".join(operator)
             operator = [f" BETWEEN ? AND ?"]
         else:
-            raise TypeError("AND/OR operators argument must be dictionary, BETWEEN must be a 2 value tuple")
+            raise TypeError("AND/OR operators argument must be list of tuples, BETWEEN must be a 2 value tuple")
 
         return "".join(operator)
 
-    def getwhere(self, select_column, like_column, query=None):
+    def getwhere(self, select_column, like_column, *, query=None):
         """Used for specific selections, from one or more
         columns:
 
@@ -102,6 +110,9 @@ class simplesql3():
 
         Can be chained to create more complex queries,
         if no query is supplied
+
+        * in the args denotes that positional argument name is required,
+        otherwise a TypeError will be raised
         """
         if query is not None:
             self._create_args(query)
@@ -110,7 +121,7 @@ class simplesql3():
         self.statement = f"SELECT {select_column} FROM {self.table_name} WHERE {like_column}"
         return self
 
-    def getlike(self, select_column, like_column, query=None):
+    def getlike(self, select_column, like_column, *, query=None):
         """Used for specific selections, from one or more
         columns:
 
@@ -120,6 +131,9 @@ class simplesql3():
 
         Can be chained to create more complex queries,
         if no query is supplied
+
+        * in the args denotes that positional argument name is required,
+        otherwise a TypeError will be raised
         """
         if query is not None:
             self._create_args(query)
@@ -128,7 +142,7 @@ class simplesql3():
         self.statement = f"SELECT {select_column} FROM {self.table_name} WHERE {like_column}"
         return self
 
-    def and_do(self, and_dict, type=None):
+    def and_where(self, and_list, *, type=None):
         """Takes a dictionary
         {
         "column1": "thing1",
@@ -139,19 +153,22 @@ class simplesql3():
         which will produce: 'AND column1 LIKE thing1' or 'AND column1 = thing1'
 
         'type' will default to '='
+
+        * in the args denotes that positional argument name is required,
+        otherwise a TypeError will be raised
         """
-        self._create_args([v for k, v in and_dict.items()])
+        self._create_args([v for k, v in and_list])
         if type is not None:
             if type is not "like":
                 raise AttributeError("Type must be either: 'like' or 'is'")
             else:
-                self.statement += self._check_operator(and_dict, "andlike")
+                self.statement += self._check_operator(and_list, "andlike")
                 return self
         else:
-            self.statement += self._check_operator(and_dict, "andis")
+            self.statement += self._check_operator(and_list, "andis")
             return self
 
-    def or_do(self, or_dict, type=None):
+    def or_where(self, or_list, *, type=None):
         """Takes a dictionary
         {
         "column1": "thing1",
@@ -162,18 +179,21 @@ class simplesql3():
         which will produce: 'OR column1 LIKE thing1' or 'OR column1 = thing1'
 
         'type' will default to '='
+
+        * in the args denotes that positional argument name is required,
+        otherwise a TypeError will be raised
         """
-        self._create_args([v for k, v in or_dict.items()])
+        self._create_args([v for k, v in or_list])
         if type is not None:
             if type is not "like":
                 raise AttributeError("Type must be either: 'like' or 'is'")
             else:
-                self.statement += self._check_operator(or_dict, "orlike")
+                self.statement += self._check_operator(or_list, "orlike")
                 return self
-        self.statement += self._check_operator(or_dict, "oris")
+        self.statement += self._check_operator(or_list, "oris")
         return self
 
-    def between(self, between_tuple, column=None):
+    def between(self, between_tuple, *, column=None):
         """Takes a tuple of exactly 2 values
         '(2018-09-30, 2018-10-01)'
         If a column is specified, then it will produce
@@ -182,6 +202,9 @@ class simplesql3():
 
         Otherwise, it can be chained with other methods and
         will only produce 'BETWEEN 2018-09-30 AND 2018-10-01'
+
+        * in the args denotes that positional argument name is required,
+        otherwise a TypeError will be raised
         """
         if len(between_tuple) != 2:
             raise ValueError("BETWEEN may only accept 2 values")
@@ -260,7 +283,7 @@ class simplesql3():
         but where_dict only accepts one key/value pair
         """
         if len(where_dict) > 1:
-            raise AttributeError("'where_dict' argument only receives one key/value pair. Chain with and_do/or_do methods for longer expressions")
+            raise AttributeError("'where_dict' argument only receives one key/value pair. Chain with and_where/or_where methods for longer expressions")
         self._create_args([v for k, v in set_dict.items()])
         self._create_args([v for k, v in where_dict.items()])
         self.statement = f"UPDATE {self.table_name} SET"
@@ -274,67 +297,14 @@ class simplesql3():
         return self
 
 
-if __name__ == '__main__':
-    # database_name, table_name, column_dict
-    a = simplesql3("testing", "testing", {"a": "INTEGER", "b": "TEXT", "c": "TEXT", "d": "TEXT"})  # Creating a DB
-    b = simplesql3("testing", "testing2", {"e": "TEXT", "f": "TEXT", "g": "TEXT", "h": "TEXT"})  # Creating a new table
-    c = simplesql3("testing", "testing")  # Already existing DB
-    # Uncomment this to populate DB for testing
-    # for each in range(100):
-    #     a.insert(1+each, 2+each, 3+each, 4+each)
-    #     b.insert(1+each, 2+each, 3+each, 4+each)
-    print(f"--\nColumn Names:\n{a.column_names}, {b.column_names}, {c.column_names}")
-    print(f"--\nSelect All:\n", f"{a.statement}", a.select(select_all=True))
+"""
+https://mail.python.org/pipermail/python-dev/2003-October/038855.html
+I find the chaining form a threat to readability; it requires that the
+reader must be intimately familiar with each of the methods.
 
-    a.custom_sql("SELECT * FROM testing")
-    print(f"--\nCustom SQL:\n", f"{a.statement}", a.select())
+I'd like to reserve chaining for operations that return new values,
+like string processing operations:
 
-    a.getwhere("a", "c", 4)
-    print(f"--\ngetwhere method:\n", f"{a.statement}", a.select())
+  y = x.rstrip("\n").split(":").lower()
 
-    a.getlike("a, b", "c", 4)
-    print(f"--\ngetlike method:\n", f"{a.statement}", a.select())
-
-    a.getlike("a, b", "c").between((2, 30))
-    print(f"--\ngetlike between:\n", f"{a.statement}", a.select())
-
-    a.getlike("a, b", "c").between((2, 30), "d")
-    print(f"--\ngetlike between (and):\n", f"{a.statement}", a.select())
-
-    a.getwhere("a, b, c", "c", 4).and_do({"d": 5, "a": 2})
-    print(f"--\ngetwhere and_do:\n", f"{a.statement}", a.select())
-
-    a.getwhere("a, b", "c", 4).or_do({"d": 5, "a": 3})
-    print(f"--\ngetwhere or_do:\n", f"{a.statement}", a.select())
-
-    a.getwhere("a, b", "c", 4).and_do({"d": 5, "a": 2}, "like")
-    print(f"--\ngetwhere and_do(like):\n", f"{a.statement}", a.select())
-
-    a.getwhere("a, b", "c", 4).or_do({"d": 5, "a": 3}, "like")
-    print(f"--\ngetwhere or_do(like):\n", f"{a.statement}", a.select())
-
-    a.getlike("a, b", "c", 4).and_do({"d": 5, "a": 3}).or_do({"a": 5, "b": 3})
-    print(f"--\ngetlike and_do or_do:\n", f"{a.statement}", a.select())
-
-    a.getlike("a, b", "c", 4).and_do({"d": 5, "a": 3}, "like").or_do({"a": 5, "b": 3}, "like")
-    print(f"--\ngetlike and_do(like) or_do(like):\n", f"{a.statement}", a.select())
-
-    a.update({"a": "a"}, {"a": 2})
-    print(f"--\nupdate\n", f"{a.statement}")
-    a.commit()
-
-    a.update({"a": "a", "b": "b", "c": "c", "d": "d"}, {"a": 1}).and_do({"b": 2, "c": 3, "d": 4})
-    print(f"--\nupdate and_do:\n", f"{a.statement}")
-    a.commit()
-
-    """
-    https://mail.python.org/pipermail/python-dev/2003-October/038855.html
-    I find the chaining form a threat to readability; it requires that the
-    reader must be intimately familiar with each of the methods.
-
-    I'd like to reserve chaining for operations that return new values,
-    like string processing operations:
-
-      y = x.rstrip("\n").split(":").lower()
-
-    """
+"""
