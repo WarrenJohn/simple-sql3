@@ -5,7 +5,9 @@ somewhat complex statements.
 
 ## To get started just:
 `from simplesql3 import simplesql3`
+
 or
+
 `from simplesql3 import simplesql3 as ss3`
 
 ## Some basic tests are:
