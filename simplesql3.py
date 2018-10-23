@@ -16,6 +16,7 @@ class dbMGMT():
         self.c = self.conn.cursor()
 
     def __exit__(self, exception_type, exception_value, traceback):
+        self.conn.commit()
         self.c.close()
         self.conn.close()
 
@@ -118,6 +119,9 @@ class simplesql3():
         """Used for specific selections, from one or more
         columns:
 
+        To get all columns, without knowing the columns names:
+        a.getwhere(select_column=",".join(a.column_names), like_column="thing1", query="thing2")
+
         select_column = column1, column2
         like_column = column3
         SELECT column1, column2 FROM my_table WHERE column3 = query
@@ -138,6 +142,9 @@ class simplesql3():
     def getlike(self, select_column, like_column, *, query=None):
         """Used for specific selections, from one or more
         columns:
+
+        To get all columns, without knowing the columns names:
+        a.getlike(select_column=",".join(a.column_names), like_column="thing1", query="thing2")
 
         select_column = column1, column2
         like_column = column3
@@ -307,7 +314,6 @@ class simplesql3():
         else:
             self.statement += "".join([f" {k} = ?" for k, v in set_dict.items()])
         self.statement += "".join([f" WHERE {k} = ?" for k, v in where_dict.items()])
-        print(self.statement)
         return self
 
     def __str__(self):
