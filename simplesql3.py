@@ -16,7 +16,6 @@ class dbMGMT():
         self.c = self.conn.cursor()
 
     def __exit__(self, exception_type, exception_value, traceback):
-        self.conn.commit()
         self.c.close()
         self.conn.close()
 
@@ -115,7 +114,17 @@ class simplesql3():
 
         return "".join(operator)
 
-    def getwhere(self, select_column, like_column, *, query=None):
+    def getfrom(self, select_column):
+        """Used for specific selections, from one or more
+        columns without a query:
+
+        select_column = column1, column2
+        SELECT column1, column2 FROM my_table
+        """
+        self.statement = f"SELECT {select_column} FROM {self.table_name}"
+        return self
+
+    def getwhere(self, select_column, like_column, query=None):
         """Used for specific selections, from one or more
         columns:
 
@@ -139,7 +148,7 @@ class simplesql3():
         self.statement = f"SELECT {select_column} FROM {self.table_name} WHERE {like_column}"
         return self
 
-    def getlike(self, select_column, like_column, *, query=None):
+    def getlike(self, select_column, like_column, query=None):
         """Used for specific selections, from one or more
         columns:
 
@@ -163,7 +172,7 @@ class simplesql3():
         self.statement = f"SELECT {select_column} FROM {self.table_name} WHERE {like_column}"
         return self
 
-    def and_where(self, and_list, *, type=None):
+    def and_where(self, and_list, type=None):
         """Takes a dictionary
         {
         "column1": "thing1",
@@ -189,7 +198,7 @@ class simplesql3():
             self.statement += self._check_operator(and_list, "andis")
             return self
 
-    def or_where(self, or_list, *, type=None):
+    def or_where(self, or_list, type=None):
         """Takes a dictionary
         {
         "column1": "thing1",
@@ -214,7 +223,7 @@ class simplesql3():
         self.statement += self._check_operator(or_list, "oris")
         return self
 
-    def between(self, between_tuple, *, column=None):
+    def between(self, between_tuple, column=None):
         """Takes a tuple of exactly 2 values
         '(2018-09-30, 2018-10-01)'
         If a column is specified, then it will produce
@@ -302,6 +311,9 @@ class simplesql3():
     def update(self, set_dict, where_dict):
         """Takes 2 dictionaries, set_dict will take many arguments
         but where_dict only accepts one key/value pair
+
+        a.update({"b": "a"}, {"a": 2}).commit()
+        Updates b column with value 'a' where a has value 2
         """
         if len(where_dict) > 1:
             raise AttributeError("'where_dict' argument only receives one key/value pair. Chain with and_where/or_where methods for longer expressions")
